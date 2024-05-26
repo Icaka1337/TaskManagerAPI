@@ -7,8 +7,8 @@
         public string Description { get; set; }
         public string Status { get; set; }
         public int ProjectId { get; set; }
-        public Project Project { get; set; }
+        public Project? Project { get; set; }
 
-        public ICollection<UserTask> UserTasks { get; set; }
+        public ICollection<UserTask>? UserTasks { get; set; }
     }
 }

@@ -8,6 +8,6 @@
         public DateTime StartDate { get; set; }
         public DateTime? EndDate { get; set; }
         public double Budget { get; set; }
-        public ICollection<Task> Tasks { get; set; }
+        public ICollection<Task>? Tasks { get; set; }
     }
 }

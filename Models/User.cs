@@ -7,6 +7,6 @@
         public string Email { get; set; }
         public string PasswordHash { get; set; }
 
-        public ICollection<UserTask> UserTasks { get; set; }
+        public ICollection<UserTask>? UserTasks { get; set; }
     }
 }

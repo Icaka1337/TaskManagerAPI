@@ -38,7 +38,7 @@ namespace TaskManagerAPI.Controllers
             var user = await _context.Users.Include(u => u.UserTasks).ThenInclude(ut => ut.Task).FirstOrDefaultAsync(u => u.Id == id);
             if (user == null)
             {
-                return NotFound();
+                return NotFound("User not found");
             }
 
             return user;
@@ -71,7 +71,7 @@ namespace TaskManagerAPI.Controllers
                 new Claim(ClaimTypes.Name, user.Username),
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
                 }),
-                Expires = DateTime.UtcNow.AddHours(1),
+                Expires = DateTime.UtcNow.AddHours(12),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
 

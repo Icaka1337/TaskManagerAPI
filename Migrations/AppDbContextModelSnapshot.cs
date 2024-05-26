@@ -51,7 +51,7 @@ namespace TaskManagerAPI.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Projects");
+                    b.ToTable("Projects", (string)null);
                 });
 
             modelBuilder.Entity("TaskManagerAPI.Models.Task", b =>
@@ -84,7 +84,7 @@ namespace TaskManagerAPI.Migrations
 
                     b.HasIndex("ProjectId");
 
-                    b.ToTable("Tasks");
+                    b.ToTable("Tasks", (string)null);
                 });
 
             modelBuilder.Entity("TaskManagerAPI.Models.User", b =>
@@ -112,7 +112,7 @@ namespace TaskManagerAPI.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("TaskManagerAPI.Models.UserTask", b =>
@@ -130,7 +130,7 @@ namespace TaskManagerAPI.Migrations
 
                     b.HasIndex("TaskId");
 
-                    b.ToTable("UserTasks");
+                    b.ToTable("UserTasks", (string)null);
                 });
 
             modelBuilder.Entity("TaskManagerAPI.Models.Task", b =>
