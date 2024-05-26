@@ -131,7 +131,20 @@ namespace TaskManagerAPI.Controllers
                 return BadRequest();
             }
 
-            _context.Entry(user).State = EntityState.Modified;
+            User existingUser = await _context.Users.FindAsync(id);
+            if (existingUser == null)
+            {
+                return NotFound();
+            }
+
+            // Check if the password has changed
+            if (existingUser.PasswordHash!= user.PasswordHash)
+            {
+                user.PasswordHash = ComputeHash(user.PasswordHash);
+            }
+
+            _context.Entry(existingUser).CurrentValues.SetValues(user);
+            _context.Entry(existingUser).State = EntityState.Modified;
 
             try
             {
