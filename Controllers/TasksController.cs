@@ -2,7 +2,10 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
+using System.Threading.Tasks;
 using TaskManagerAPI.Models;
+using TaskManagerAPI.DTOs;
 using Task = TaskManagerAPI.Models.Task;
 
 namespace TaskManagerAPI.Controllers
@@ -20,29 +23,131 @@ namespace TaskManagerAPI.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Task>>> GetTasks()
+        public async Task<ActionResult<IEnumerable<TaskDto>>> GetTasks()
         {
-            return await _context.Tasks.Include(t => t.Project).Include(t => t.UserTasks).ThenInclude(ut => ut.User).ToListAsync();
+            var tasks = await _context.Tasks
+                .Include(t => t.Project)
+                .Include(t => t.UserTasks)
+                    .ThenInclude(ut => ut.User)
+                .ToListAsync();
+
+            return tasks.Select(task => new TaskDto
+            {
+                Id = task.Id,
+                Title = task.Title,
+                Description = task.Description,
+                Status = task.Status,
+                ProjectId = task.ProjectId,
+                Project = new ProjectDto
+                {
+                    Id = task.Project.Id,
+                    Name = task.Project.Name,
+                    Description = task.Project.Description,
+                    StartDate = task.Project.StartDate,
+                    EndDate = task.Project.EndDate,
+                    Budget = task.Project.Budget
+                },
+                UserTasks = task.UserTasks.Select(ut => new UserTaskDto
+                {
+                    UserId = ut.UserId,
+                    TaskId = ut.TaskId,
+                    AssignedDate = ut.AssignedDate,
+                    User = new UserDto
+                    {
+                        Id = ut.User.Id,
+                        Username = ut.User.Username,
+                        Email = ut.User.Email
+                    }
+                }).ToList()
+            }).ToList();
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Task>> GetTask(int id)
+        public async Task<ActionResult<TaskDto>> GetTask(int id)
         {
-            var task = await _context.Tasks.Include(t => t.Project).Include(t => t.UserTasks).ThenInclude(ut => ut.User).FirstOrDefaultAsync(t => t.Id == id);
+            var task = await _context.Tasks
+                .Include(t => t.Project)
+                .Include(t => t.UserTasks)
+                    .ThenInclude(ut => ut.User)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
             if (task == null)
             {
                 return NotFound();
             }
 
-            return task;
+            var taskDto = new TaskDto
+            {
+                Id = task.Id,
+                Title = task.Title,
+                Description = task.Description,
+                Status = task.Status,
+                ProjectId = task.ProjectId,
+                Project = new ProjectDto
+                {
+                    Id = task.Project.Id,
+                    Name = task.Project.Name,
+                    Description = task.Project.Description,
+                    StartDate = task.Project.StartDate,
+                    EndDate = task.Project.EndDate,
+                    Budget = task.Project.Budget
+                },
+                UserTasks = task.UserTasks.Select(ut => new UserTaskDto
+                {
+                    UserId = ut.UserId,
+                    TaskId = ut.TaskId,
+                    AssignedDate = ut.AssignedDate,
+                    User = new UserDto
+                    {
+                        Id = ut.User.Id,
+                        Username = ut.User.Username,
+                        Email = ut.User.Email
+                    }
+                }).ToList()
+            };
+
+            return taskDto;
         }
 
         [HttpGet("search")]
-        public async Task<ActionResult<IEnumerable<Task>>> SearchTasks(string title)
+        public async Task<ActionResult<IEnumerable<TaskDto>>> SearchTasks(string title)
         {
-            return await _context.Tasks
+            var tasks = await _context.Tasks
                 .Where(t => t.Title.Contains(title))
+                .Include(t => t.Project)
+                .Include(t => t.UserTasks)
+                    .ThenInclude(ut => ut.User)
                 .ToListAsync();
+
+            return tasks.Select(task => new TaskDto
+            {
+                Id = task.Id,
+                Title = task.Title,
+                Description = task.Description,
+                Status = task.Status,
+                ProjectId = task.ProjectId,
+                Project = new ProjectDto
+                {
+                    Id = task.Project.Id,
+                    Name = task.Project.Name,
+                    Description = task.Project.Description,
+                    StartDate = task.Project.StartDate,
+                    EndDate = task.Project.EndDate,
+                    Budget = task.Project.Budget
+                },
+                UserTasks = task.UserTasks.Select(ut => new UserTaskDto
+                {
+                    UserId = ut.UserId,
+                    TaskId = ut.TaskId,
+                    AssignedDate = ut.AssignedDate,
+                    User = new UserDto
+                    {
+                        Id = ut.User.Id,
+                        Username = ut.User.Username,
+                        Email = ut.User.Email
+                    }
+                }).ToList()
+            }).ToList();
         }
 
         [HttpPost]

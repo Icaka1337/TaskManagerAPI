@@ -8,7 +8,11 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using TaskManagerAPI.Models;
-
+using TaskManagerAPI.DTOs;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System;
 
 namespace TaskManagerAPI.Controllers
 {
@@ -27,29 +31,66 @@ namespace TaskManagerAPI.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<User>>> GetUsers()
+        public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers()
         {
-            return await _context.Users.ToListAsync();
+            var users = await _context.Users.ToListAsync();
+
+            var userDtos = users.Select(u => new UserDto
+            {
+                Id = u.Id,
+                Username = u.Username,
+                Email = u.Email
+            }).ToList();
+
+            return userDtos;
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<User>> GetUser(int id)
+        public async Task<ActionResult<UserDetailsDto>> GetUser(int id)
         {
-            var user = await _context.Users.Include(u => u.UserTasks).ThenInclude(ut => ut.Task).FirstOrDefaultAsync(u => u.Id == id);
+            var user = await _context.Users
+                .Include(u => u.UserTasks)
+                .ThenInclude(ut => ut.Task)
+                .FirstOrDefaultAsync(u => u.Id == id);
+
             if (user == null)
             {
                 return NotFound("User not found");
             }
 
-            return user;
+            var userDetailsDto = new UserDetailsDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                Tasks = user.UserTasks.Select(ut => new TaskDto
+                {
+                    Id = ut.Task.Id,
+                    Title = ut.Task.Title,
+                    Description = ut.Task.Description,
+                    Status = ut.Task.Status,
+                    ProjectId = ut.Task.ProjectId
+                }).ToList()
+            };
+
+            return userDetailsDto;
         }
 
         [HttpGet("search")]
-        public async Task<ActionResult<IEnumerable<User>>> SearchUsers(string username)
+        public async Task<ActionResult<IEnumerable<UserDto>>> SearchUsers(string username)
         {
-            return await _context.Users
+            var users = await _context.Users
                 .Where(u => u.Username.Contains(username))
                 .ToListAsync();
+
+            var userDtos = users.Select(u => new UserDto
+            {
+                Id = u.Id,
+                Username = u.Username,
+                Email = u.Email
+            }).ToList();
+
+            return userDtos;
         }
 
         [AllowAnonymous]
@@ -68,8 +109,8 @@ namespace TaskManagerAPI.Controllers
             {
                 Subject = new ClaimsIdentity(new Claim[]
                 {
-                new Claim(ClaimTypes.Name, user.Username),
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
+                    new Claim(ClaimTypes.Name, user.Username),
+                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
                 }),
                 Expires = DateTime.UtcNow.AddHours(12),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
@@ -116,34 +157,40 @@ namespace TaskManagerAPI.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<User>> PostUser(User user)
+        public async Task<ActionResult<UserDto>> PostUser(UserDto userDto)
         {
+            var user = new User
+            {
+                Username = userDto.Username,
+                Email = userDto.Email,
+                PasswordHash = ComputeHash("defaultPassword") // Assign a default password or handle password input properly
+            };
+
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetUser), new { id = user.Id }, user);
+
+            userDto.Id = user.Id;
+
+            return CreatedAtAction(nameof(GetUser), new { id = userDto.Id }, userDto);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutUser(int id, User user)
+        public async Task<IActionResult> PutUser(int id, UserDto userDto)
         {
-            if (id != user.Id)
+            if (id != userDto.Id)
             {
                 return BadRequest();
             }
 
-            User existingUser = await _context.Users.FindAsync(id);
+            var existingUser = await _context.Users.FindAsync(id);
             if (existingUser == null)
             {
                 return NotFound();
             }
 
-            // Check if the password has changed
-            if (existingUser.PasswordHash!= user.PasswordHash)
-            {
-                user.PasswordHash = ComputeHash(user.PasswordHash);
-            }
+            existingUser.Username = userDto.Username;
+            existingUser.Email = userDto.Email;
 
-            _context.Entry(existingUser).CurrentValues.SetValues(user);
             _context.Entry(existingUser).State = EntityState.Modified;
 
             try
@@ -165,9 +212,22 @@ namespace TaskManagerAPI.Controllers
             return NoContent();
         }
 
-        /*[HttpDelete("{id}")]
+        [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteUser(int id)
         {
+            var userIdClaim = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null)
+            {
+                return Unauthorized();
+            }
+
+            var userId = int.Parse(userIdClaim.Value);
+
+            if (userId != id)
+            {
+                return Forbid();
+            }
+
             var user = await _context.Users.FindAsync(id);
             if (user == null)
             {
@@ -178,36 +238,6 @@ namespace TaskManagerAPI.Controllers
             await _context.SaveChangesAsync();
 
             return NoContent();
-        }*/
-
-         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteUser(int id)
-        {
-            // Retrieve the user ID from the claims in the JWT token
-            var userIdClaim = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null)
-            {
-                return Unauthorized(); // User ID claim not found in the token
-            }
-
-            var userId = int.Parse(userIdClaim.Value);
-
-            // Ensure that the authenticated user matches the user being deleted
-            if (userId != id)
-            {
-                return Forbid(); // User is not authorized to delete other users
-            }
-
-            var user = await _context.Users.FindAsync(id);
-            if (user == null)
-            {
-                return NotFound(); // User not found
-            }
-
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
-
-            return NoContent(); // Successful deletion
         }
 
         [HttpPost("{userId}/tasks/{taskId}")]
