@@ -112,7 +112,7 @@ namespace TaskManagerAPI.Controllers
             return projectDtos;
         }
 
-        [HttpPost]
+        [HttpPost("PostProject")]
         public async Task<ActionResult<ProjectDto>> PostProject(ProjectDto projectDto)
         {
             var project = new Project
