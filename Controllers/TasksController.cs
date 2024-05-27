@@ -150,7 +150,7 @@ namespace TaskManagerAPI.Controllers
             }).ToList();
         }
 
-        [HttpPost]
+        [HttpPost("PostTask")]
         public async Task<ActionResult<Task>> PostTask(Task task)
         {
             _context.Tasks.Add(task);
