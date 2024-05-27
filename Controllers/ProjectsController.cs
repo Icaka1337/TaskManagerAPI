@@ -23,10 +23,16 @@ namespace TaskManagerAPI.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ProjectDto>>> GetProjects()
+        public async Task<ActionResult<PagedResult<ProjectDto>>> GetProjects(int page = 1, int pageSize = 15)
         {
-            var projects = await _context.Projects
+            var query = _context.Projects
                 .Include(p => p.Tasks)
+                .AsQueryable();
+
+            var totalItems = await query.CountAsync();
+            var projects = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
 
             var projectDtos = projects.Select(p => new ProjectDto
@@ -47,7 +53,16 @@ namespace TaskManagerAPI.Controllers
                 }).ToList()
             }).ToList();
 
-            return projectDtos;
+            var pagedResult = new PagedResult<ProjectDto>
+            {
+                Items = projectDtos,
+                CurrentPage = page,
+                PageSize = pageSize,
+                TotalCount = totalItems,
+                TotalPages = (int)Math.Ceiling(totalItems / (double)pageSize)
+            };
+
+            return pagedResult;
         }
 
         [HttpGet("{id}")]
